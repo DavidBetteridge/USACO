@@ -1,63 +1,81 @@
-def compute_D(blocks, lhs, rhs):
+import math
 
-    options = []
+class State:
+    def __init__(self, N, lhs, gaps, rhs):
+        self.N = N
+        self.lhs = lhs
+        self.gaps = gaps
+        self.rhs = rhs
 
-    if len(blocks) != 0:
-        options.append(len(blocks))
+    def D(self):
+        if len(self.gaps) > 0:
+            return min(self.gaps) + 1
+        else:
+            return self.N
 
-    if lhs > 0:
-        options.append(lhs)
+    def largest_gap(self):
+        if len(self.gaps) > 0:
+            biggest_gap = max(self.gaps)
+        else: 
+            biggest_gap = 0
 
-    if rhs > 0:
-        options.append(rhs)
+        return biggest_gap            
 
-    return min(options) + 1
+    def __repr__(self):
+        return f'{self.lhs} {self.gaps} {self.rhs} ({self.D()})'
 
-def add_cow(blocks, lhs, rhs):
+def add_cow(state):
 
-    D = compute_D(blocks, lhs, rhs)
+    D = state.D()
+    largest_gap = state.largest_gap()
 
-    largest_block = 0
-    if len(blocks) > 0:
-        largest_block = max(blocks)
-
-    if largest_block >= (D * 2):
+    if largest_gap >= (D * 2):
         # Split block into D and the rest
-        blocks.append(D)
-        blocks.append(largest_block - D)
-        blocks.remove(largest_block)
+        state.gaps.append(D)
+        state.gaps.append(largest_gap - D)
+        state.gaps.remove(largest_gap)
+    elif (len(state.gaps) == 0 and state.lhs >= state.rhs) or state.lhs >= D:
+
+        # Special case!
+        if len(state.gaps) == 0 and state.rhs == 0:
+            state.rhs = state.lhs - 1
+        else:
+            state.gaps.append(state.lhs - 1)
+        state.lhs = 0
+
+    elif (len(state.gaps) == 0 and state.lhs < state.rhs) or state.rhs >= D:        
+        state.gaps.append(state.rhs - 1)
+        state.rhs = 0        
+
     else:
         # Split block in half,  this will decrease D
-        newD = int(largest_block / 2)
-        blocks.append(newD)
-        blocks.append(largest_block - newD)        
-        blocks.remove(largest_block)
+        newD = math.ceil(largest_gap / 2)
+        state.gaps.append(newD - 1)
+        state.gaps.append(largest_gap - newD )        
+        state.gaps.remove(largest_gap)
+
+    return State(state.N, state.lhs, state.gaps, state.rhs)
 
 def solve_file(filename):
-    N,data = open(filename).read().splitlines()
+    N, data = open(filename).read().splitlines()
     
     blocks = data.split('1')
-    gaps = []
+
     if len(blocks) == 1:
-        lhs = int(N)
-        rhs = 0
-    elif len(blocks) == 2:
-        lhs = len(blocks[0])
-        rhs = len(blocks[-1])
+        state = State(int(N), len(blocks[0]), [], 0)
     else:
-        lhs = len(blocks[0])
-        rhs = len(blocks[-1])   
-        gaps = list(map(len, blocks[1:][:-1]))        
+        state = State(int(N), len(blocks[0]), list(map(len, blocks[1:][:-1])), len(blocks[-1]))
 
-    add_cow(gaps, lhs, rhs)
-    add_cow(gaps, lhs, rhs)
+    state = add_cow(state)
     
-    return compute_D(gaps, lhs, rhs)
+    state = add_cow(state)
 
+    return state.D()
+
+def test(test_number):
+    actual_result = solve_file(f'socdist1_tests/{test_number}.in')
+    expected_result = open(f'socdist1_tests/{test_number}.out').read()
+    print(f'socdist1_tests/{test_number}.in', actual_result, expected_result)
 
 for i in range(1, 16):
-    actual_result = solve_file(f'socdist1_tests/{i}.in')
-    expected_result = open(f'socdist1_tests/{i}.out').read()
-    print(f'socdist1_tests/{i}.in', actual_result, expected_result)
-
-0000000
+    test(i)    
